@@ -67,3 +67,29 @@ AttributeError: 'Settings' object has no attribute 'redis_host'
   backend (uvicorn :8000) + Vite dev server (:5173). Confirmed the app is served at
   http://localhost:5173 (title "PathReview - AI Portfolio Review Assistant") and that the
   `/api` proxy reaches the backend.
+
+---
+
+## Week 8 — Reproduction & solution planning
+
+**Reproduction commit link:** https://github.com/chaoyi09/pathreview/commit/f2fe872
+<!-- This commit adds tests/unit/test_health_route.py, whose
+     test_health_does_not_reference_removed_redis_host_fields asserts the Settings
+     model has no redis_host/redis_port. The Week 7 commit (b73de11) also documents the
+     reproduction steps under "Reproduction (local)" above. -->
+
+**Reproduction summary:**
+Importing the config and reading the field the health check relies on
+(`python -c "from core.config import settings; settings.redis_host"`) raises
+`AttributeError: 'Settings' object has no attribute 'redis_host'`, and hitting `GET /health`
+surfaces the same failure in the Redis probe — confirming the bug is real and lives in
+`api/routes/health.py` reading a field that `core/config.py` never defines.
+
+**PLAN.md link:** https://github.com/chaoyi09/pathreview/blob/fix/155-health-redis-host/PLAN.md
+
+**Walkthrough video (recommended):** [optional — add Loom link here if I record one]
+
+**Blockers or open questions:**
+None blocking. Note: `GET /health` also returns 503 because of a *separate* SQLAlchemy 2.x
+bug (`db.execute("SELECT 1")` needs `text(...)`), which is out of scope for #155 — I verify
+my Redis fix by checking the `redis` sub-status, not the overall status.
